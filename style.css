@@ -1,0 +1,700 @@
+/* ------------------------------------------------------------------ */
+/* palettes                                                            */
+/* ------------------------------------------------------------------ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0d12;
+  --bg-pane: #12151d;
+  --line: #232836;
+  --text: #eef1f7;
+  --muted: #7c8598;
+
+  --timer: #f0a03c;
+  --stopwatch: #51c7d4;
+  --on-timer: #0b0d12;
+  --on-stopwatch: #0b0d12;
+
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Roboto Mono", Menlo, Consolas, monospace;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f2f3f7;
+  --bg-pane: #ffffff;
+  --line: #dfe3ec;
+  --text: #12151d;
+  --muted: #6b7386;
+
+  --timer: #c97a10;
+  --stopwatch: #10798a;
+  --on-timer: #ffffff;
+  --on-stopwatch: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+/* set during boot so the first paint doesn't animate colours into place */
+.booting *,
+.booting *::before,
+.booting *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ------------------------------------------------------------------ */
+/* panes                                                              */
+/* ------------------------------------------------------------------ */
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 2.5rem);
+  position: relative;
+  isolation: isolate;
+}
+
+/* glow is derived from whichever accent the pane is using, so custom
+   colors need no extra bookkeeping */
+.pane--timer {
+  --accent: var(--timer);
+  --on-accent: var(--on-timer);
+  --accentglow: color-mix(in srgb, var(--timer) 35%, transparent);
+}
+
+.pane--stopwatch {
+  --accent: var(--stopwatch);
+  --on-accent: var(--on-stopwatch);
+  --accentglow: color-mix(in srgb, var(--stopwatch) 35%, transparent);
+  border-left: 1px solid var(--line);
+}
+
+.pane::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(60% 45% at 50% 38%, var(--accentglow), transparent 70%);
+  opacity: 0.5;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.pane.is-running::before { opacity: 1; }
+
+.pane.is-finished::before {
+  animation: pulse 1s ease-in-out 4;
+}
+
+@keyframes pulse {
+  50% { opacity: 0.15; }
+}
+
+.pane__title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------------ */
+/* ring + display                                                     */
+/* ------------------------------------------------------------------ */
+
+.ring {
+  --progress: 1;
+  display: grid;
+  place-items: center;
+  width: clamp(190px, 42vw, 290px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    conic-gradient(var(--accent) calc(var(--progress) * 360deg), var(--line) 0);
+}
+
+.ring--plain {
+  background: none;
+  border: 1px solid var(--line);
+  box-shadow: 0 0 40px -20px var(--accentglow);
+}
+
+.ring__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
+  border-radius: 50%;
+  background: var(--bg-pane);
+}
+
+.ring--plain .ring__inner {
+  width: calc(100% - 26px);
+  height: calc(100% - 26px);
+}
+
+.display {
+  font-family: var(--mono);
+  font-size: clamp(1.9rem, 6.5vw, 3.1rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text);
+}
+
+.display__hint {
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ */
+/* timer config                                                       */
+/* ------------------------------------------------------------------ */
+
+.config {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.field label {
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field input {
+  width: 4.4rem;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--bg-pane);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accentglow);
+}
+
+.field input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.field input::-webkit-outer-spin-button,
+.field input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* arrow keys still increment; the native nubs just clutter the pill */
+.field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ------------------------------------------------------------------ */
+/* presets                                                            */
+/* ------------------------------------------------------------------ */
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  max-width: 24rem;
+}
+
+.chip {
+  padding: 0.34rem 0.7rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.chip:hover:not(:disabled),
+.chip:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.chip[aria-pressed="true"] {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ */
+/* controls                                                           */
+/* ------------------------------------------------------------------ */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.btn {
+  min-width: 6.2rem;
+  padding: 0.7rem 1.35rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--bg-pane);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.15s ease,
+              color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+
+.btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accentglow);
+}
+
+.btn--primary {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn--primary:hover:not(:disabled) {
+  color: var(--on-accent);
+  box-shadow: 0 0 24px -6px var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ */
+/* laps                                                               */
+/* ------------------------------------------------------------------ */
+
+.laps {
+  width: min(100%, 20rem);
+  max-height: 11rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--line);
+}
+
+.laps:empty { display: none; }
+
+.laps li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.laps li span:last-child { color: var(--text); }
+
+.laps li.is-best span:last-child { color: var(--stopwatch); }
+
+/* ------------------------------------------------------------------ */
+/* both-clocks button, centred on the seam                            */
+/* ------------------------------------------------------------------ */
+
+.both-btn {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  padding: 0;
+
+  color: var(--muted);
+  background: var(--bg-pane);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+
+  box-shadow: 0 12px 32px -14px rgba(0, 0, 0, 0.85);
+  transition: color 0.15s ease, border-color 0.15s ease,
+              transform 0.15s ease, box-shadow 0.25s ease;
+}
+
+.both-btn:hover,
+.both-btn:focus-visible {
+  color: var(--text);
+  outline: none;
+  border-color: var(--muted);
+  transform: translate(-50%, -50%) scale(1.06);
+  box-shadow: 0 0 28px -10px var(--timer), 0 0 28px -10px var(--stopwatch);
+}
+
+.both-btn:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 3px;
+}
+
+.both-btn:active { transform: translate(-50%, -50%) scale(0.96); }
+
+.both-btn svg { grid-area: 1 / 1; }
+
+.both-btn .icon-pause,
+.both-btn.is-running .icon-play { display: none; }
+.both-btn.is-running .icon-pause { display: block; }
+
+/* ------------------------------------------------------------------ */
+/* appearance dock                                                    */
+/* ------------------------------------------------------------------ */
+
+.settings-dock {
+  position: fixed;
+  right: clamp(0.75rem, 2vw, 1.5rem);
+  bottom: clamp(0.75rem, 2vw, 1.5rem);
+  z-index: 40;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.settings__button {
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+
+  color: var(--muted);
+  background: var(--bg-pane);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+
+  box-shadow: 0 10px 30px -16px rgba(0, 0, 0, 0.9);
+  transition: color 0.15s ease, border-color 0.15s ease, transform 0.35s ease;
+}
+
+.settings__button:hover,
+.settings__button:focus-visible {
+  color: var(--text);
+  border-color: var(--muted);
+  outline: none;
+}
+
+.settings__button:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
+
+.settings-dock.is-open .settings__button {
+  color: var(--text);
+  transform: rotate(60deg);
+}
+
+.settings {
+  width: min(18.5rem, calc(100vw - 2rem));
+  padding: 1rem 1.1rem 1.1rem;
+
+  background: var(--bg-pane);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 28px 60px -28px rgba(0, 0, 0, 0.9);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  animation: panel-in 0.18s ease-out;
+}
+
+.settings[hidden] { display: none; }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+.settings__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings__title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.settings__close {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.settings__close:hover,
+.settings__close:focus-visible {
+  color: var(--text);
+  outline: none;
+  background: var(--bg);
+}
+
+.settings__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings__group legend {
+  padding: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.color-input {
+  flex: 0 0 auto;
+  width: 2.3rem;
+  height: 2.3rem;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.color-input::-webkit-color-swatch-wrapper { padding: 3px; }
+.color-input::-webkit-color-swatch { border: 0; border-radius: 7px; }
+.color-input::-moz-color-swatch { border: 0; border-radius: 7px; }
+
+.color-input:focus-visible {
+  outline: none;
+  border-color: var(--muted);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.swatch {
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  background: var(--swatch);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  transition: transform 0.12s ease, outline-color 0.12s ease;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.swatch:hover { transform: scale(1.15); }
+
+.swatch:focus-visible { outline-color: var(--muted); }
+
+.swatch[aria-pressed="true"] { outline-color: var(--text); }
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.segmented button {
+  padding: 0.42rem 0.2rem;
+  font-family: inherit;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.segmented button:hover { color: var(--text); }
+
+.segmented button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--bg-pane);
+  box-shadow: 0 1px 4px -1px rgba(0, 0, 0, 0.45);
+}
+
+.segmented button:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 1px;
+}
+
+.settings__reset {
+  align-self: flex-start;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.settings__reset:hover,
+.settings__reset:focus-visible {
+  color: var(--text);
+  border-color: var(--text);
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* responsive: stack on narrow screens                                */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 780px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  /* stacked panes scroll naturally instead of fighting for the viewport */
+  .pane {
+    min-height: auto;
+    padding-block: 2.75rem;
+  }
+
+  .pane--stopwatch {
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+
+  .laps { max-height: 8rem; }
+
+  /* stacked: the seam is horizontal, so the button joins the flow and
+     straddles it instead of floating over the controls */
+  .both-btn {
+    position: static;
+    transform: none;
+    z-index: 2;
+    grid-column: 1 / -1;
+    justify-self: center;
+    margin-block: -1.5rem;
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .both-btn:hover,
+  .both-btn:focus-visible { transform: scale(1.06); }
+
+  .both-btn:active { transform: scale(0.96); }
+
+  /* keep the last row of taps clear of the settings button */
+  body { padding-bottom: 3.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
+}
